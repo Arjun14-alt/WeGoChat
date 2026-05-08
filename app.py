@@ -1,12 +1,19 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from flask_socketio import SocketIO, send, join_room, leave_room
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "wegotchat-secret"
+app.config["SECRET_KEY"] = "wegochat-secret-key"
 
-# ✅ IMPORTANT: no eventlet, no gevent
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+# ✅ Render + SocketIO safe config
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet"
+)
 
+# -------------------------
+# ROUTES
+# -------------------------
 
 @app.route("/")
 def home():
@@ -18,7 +25,10 @@ def chat():
     return render_template("chat.html")
 
 
-# 💬 Join room
+# -------------------------
+# SOCKET EVENTS
+# -------------------------
+
 @socketio.on("join")
 def handle_join(data):
     name = data["name"]
@@ -28,7 +38,6 @@ def handle_join(data):
     send({"msg": f"💬 {name} joined the chat"}, room=room)
 
 
-# 💬 Message handler
 @socketio.on("message")
 def handle_message(data):
     room = data["room"]
@@ -38,7 +47,6 @@ def handle_message(data):
     send({"msg": f"{name}: {msg}"}, room=room)
 
 
-# 💬 Leave room
 @socketio.on("leave")
 def handle_leave(data):
     name = data["name"]
@@ -48,7 +56,14 @@ def handle_leave(data):
     send({"msg": f"🚪 {name} left the chat"}, room=room)
 
 
-# 🚀 RUN SERVER (THIS IS CRITICAL)
+# -------------------------
+# RUN (IMPORTANT FOR RENDER)
+# -------------------------
+
 if __name__ == "__main__":
-    print("🔥 WeGoChat starting...")
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+    print("🔥 WeGoChat running...")
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=10000
+    )
